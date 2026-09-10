@@ -3,7 +3,6 @@ const { body } = require("express-validator");
 const validate = require("../middleware/validate");
 const { requireBusiness } = require("../middleware/auth");
 const { authLimiter } = require("../middleware/rateLimit");
-const { uploadLogo } = require("../middleware/upload");
 const authController = require("../controllers/business.auth.controller");
 const settingsController = require("../controllers/business.settings.controller");
 const customersController = require("../controllers/business.customers.controller");
@@ -37,7 +36,7 @@ router.put(
   validate,
   settingsController.updatePin
 );
-router.put("/me/branding", requireBusiness, uploadLogo, settingsController.updateBranding);
+router.put("/me/branding", requireBusiness, settingsController.updateBranding);
 router.get("/me/qr", requireBusiness, settingsController.getQr);
 router.get("/me/qr/download", requireBusiness, settingsController.downloadQr);
 

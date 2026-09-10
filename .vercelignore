@@ -1,0 +1,6 @@
+.env
+.env.local
+seed/
+*.md
+!api.md
+.git

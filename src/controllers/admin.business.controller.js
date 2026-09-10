@@ -52,10 +52,6 @@ const createBusiness = asyncHandler(async (req, res) => {
     ...parsedOverrides,
   });
 
-  if (req.file) {
-    business.branding.logoUrl = `/uploads/logos/${req.file.filename}`;
-  }
-
   await business.save();
   created(res, business);
 });
@@ -105,10 +101,6 @@ const updateBusiness = asyncHandler(async (req, res) => {
   if (name) business.name = name;
   if (ownerPassword) business.owner.passwordHash = await Business.hash(ownerPassword);
   if (pin) business.pinHash = await Business.hash(pin);
-
-  if (req.file) {
-    business.branding.logoUrl = `/uploads/logos/${req.file.filename}`;
-  }
 
   await business.save();
   ok(res, business);

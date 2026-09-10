@@ -53,7 +53,6 @@ const updateBranding = asyncHandler(async (req, res) => {
   const { primaryColor, secondaryColor } = req.body;
   if (primaryColor) req.business.branding.primaryColor = primaryColor;
   if (secondaryColor) req.business.branding.secondaryColor = secondaryColor;
-  if (req.file) req.business.branding.logoUrl = `/uploads/logos/${req.file.filename}`;
 
   await req.business.save();
   ok(res, req.business.branding);

@@ -68,7 +68,6 @@ const businessSchema = new mongoose.Schema(
 
     // Branding
     branding: {
-      logoUrl: { type: String, default: null },
       primaryColor: { type: String, default: "#111827" },
       secondaryColor: { type: String, default: "#F59E0B" },
     },

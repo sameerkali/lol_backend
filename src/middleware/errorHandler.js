@@ -1,4 +1,3 @@
-const multer = require("multer");
 const ApiError = require("../utils/ApiError");
 const env = require("../config/env");
 
@@ -8,10 +7,6 @@ function notFoundHandler(req, res) {
 
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ success: false, message: err.message });
-  }
-
   if (err && err.isApiError) {
     return res.status(err.statusCode).json({ success: false, message: err.message, details: err.details });
   }

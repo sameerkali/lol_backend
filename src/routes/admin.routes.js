@@ -3,7 +3,6 @@ const { body } = require("express-validator");
 const validate = require("../middleware/validate");
 const { requireAdmin } = require("../middleware/auth");
 const { authLimiter } = require("../middleware/rateLimit");
-const { uploadLogo } = require("../middleware/upload");
 const authController = require("../controllers/admin.auth.controller");
 const businessController = require("../controllers/admin.business.controller");
 
@@ -37,13 +36,12 @@ router.get("/businesses", requireAdmin, businessController.listBusinesses);
 router.post(
   "/businesses",
   requireAdmin,
-  uploadLogo,
   [body("name").notEmpty(), body("ownerEmail").isEmail(), body("ownerPassword").isLength({ min: 8 })],
   validate,
   businessController.createBusiness
 );
 router.get("/businesses/:id", requireAdmin, businessController.getBusiness);
-router.put("/businesses/:id", requireAdmin, uploadLogo, businessController.updateBusiness);
+router.put("/businesses/:id", requireAdmin, businessController.updateBusiness);
 router.patch("/businesses/:id/plan", requireAdmin, businessController.patchPlan);
 router.patch("/businesses/:id/status", requireAdmin, businessController.patchStatus);
 router.delete("/businesses/:id", requireAdmin, businessController.deleteBusiness);
