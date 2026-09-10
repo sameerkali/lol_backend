@@ -6,7 +6,8 @@ Digital stamp-card backend for **lol.expendifii.com** — three consumers of thi
 - **Business panel** — a café/restaurant owner manages their own loyalty program (`/api/business/*`)
 - **Customer page** — public, no login, phone-number based (`/api/public/*`)
 
-Base URL (local dev): `http://localhost:5001/api`
+Base URL (production): `https://lol-api.expendifii.com/api`
+Base URL (local dev, fallback): `http://localhost:5001/api`
 
 ## Setup
 
@@ -37,7 +38,7 @@ The app is packaged as a single serverless function:
 - [`src/config/db.js`](src/config/db.js) caches the Mongoose connection promise so a warm Lambda reuses it instead of reconnecting per-request; [`src/app.js`](src/app.js) awaits it on every `/api` request before hitting a route (cheap no-op once connected).
 - `server.js` (with `app.listen`) is only used for local dev / non-serverless hosting — Vercel never runs it.
 
-**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (set to the deployed frontend's origin — CORS is locked to this), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
+**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (set to the deployed frontend's origin — CORS is locked to this), `API_BASE_URL` (set to `https://lol-api.expendifii.com` — this backend's own public URL once the custom domain is attached in Vercel; falls back to `http://localhost:$PORT` if unset, which is only correct for local dev), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
 
 ```bash
 npm i -g vercel   # if not already installed
@@ -171,7 +172,7 @@ curl -X POST /api/public/businesses/java-hut/redeem -d '{"phone":"9999900001","m
 
 ## Config validation
 
-`src/config/env.js` calls a `required()` helper for `MONGODB_URI` and `JWT_SECRET` — if either is missing, the process throws **at require-time** and refuses to start (fails fast rather than serving requests with a broken config). Everything else in `.env` has a default (`PORT=5000`, `NODE_ENV=development`, `FRONTEND_URL=http://localhost:3000`, `JWT_EXPIRES_IN=7d`).
+`src/config/env.js` calls a `required()` helper for `MONGODB_URI` and `JWT_SECRET` — if either is missing, the process throws **at require-time** and refuses to start (fails fast rather than serving requests with a broken config). Everything else in `.env` has a default (`PORT=5000`, `NODE_ENV=development`, `FRONTEND_URL=http://localhost:3000`, `API_BASE_URL=http://localhost:$PORT`, `JWT_EXPIRES_IN=7d`).
 
 ## Validations & edge cases
 

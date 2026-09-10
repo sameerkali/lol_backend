@@ -41,6 +41,7 @@ app.get("/", (req, res) => {
     success: true,
     status: "ok",
     message: "Expendifii Loyalty API",
+    baseUrl: env.apiBaseUrl,
     docs: "/api.md",
     uptime: process.uptime(),
     time: new Date().toISOString(),
