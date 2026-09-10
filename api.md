@@ -38,7 +38,7 @@ The app is packaged as a single serverless function:
 - [`src/config/db.js`](src/config/db.js) caches the Mongoose connection promise so a warm Lambda reuses it instead of reconnecting per-request; [`src/app.js`](src/app.js) awaits it on every `/api` request before hitting a route (cheap no-op once connected).
 - `server.js` (with `app.listen`) is only used for local dev / non-serverless hosting — Vercel never runs it.
 
-**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (set to the deployed frontend's origin — CORS is locked to this), `API_BASE_URL` (set to `https://lol-api.expendifii.com` — this backend's own public URL once the custom domain is attached in Vercel; falls back to `http://localhost:$PORT` if unset, which is only correct for local dev), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
+**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (the deployed frontend's origin, e.g. `https://lol.expendifii.com` — CORS is locked to this; comma-separate multiple origins if needed, a trailing slash is stripped automatically so it's safe either way), `API_BASE_URL` (set to `https://lol-api.expendifii.com` — this backend's own public URL once the custom domain is attached in Vercel; falls back to `http://localhost:$PORT` if unset, which is only correct for local dev), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
 
 ```bash
 npm i -g vercel   # if not already installed
@@ -167,7 +167,7 @@ curl -X POST /api/public/businesses/java-hut/redeem -d '{"phone":"9999900001","m
 
 - Passwords and PINs are bcrypt-hashed; never returned by the API (stripped in `toJSON`).
 - Public visit/redeem endpoints are rate-limited per IP+business to slow PIN brute-forcing.
-- CORS is locked to `FRONTEND_URL`.
+- CORS is locked to `FRONTEND_URL` (comma-separated list of exact origins; trailing slashes are stripped before comparison, so `https://lol.expendifii.com` and `https://lol.expendifii.com/` are treated the same). Requests with no `Origin` header (curl, server-to-server) bypass the check — there's nothing for CORS to enforce there. A disallowed origin gets a clean `403`, not a silent browser-side CORS failure.
 - There is no image/file upload anywhere in this API — branding is colors only (`primaryColor`/`secondaryColor`). No `multer`, no disk or third-party storage, no `/uploads` static route.
 
 ## Config validation

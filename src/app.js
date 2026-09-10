@@ -10,11 +10,24 @@ const routes = require("./routes");
 const sanitize = require("./middleware/sanitize");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const { apiLimiter } = require("./middleware/rateLimit");
+const ApiError = require("./utils/ApiError");
 
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: env.frontendUrl, credentials: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No Origin header = not a browser cross-origin request (curl, server-to-server,
+      // same-origin) — nothing for CORS to enforce, so allow it through.
+      if (!origin || env.allowedOrigins.includes(origin.replace(/\/+$/, ""))) {
+        return callback(null, true);
+      }
+      callback(ApiError.forbidden(`CORS: origin "${origin}" is not allowed`));
+    },
+    credentials: true,
+  })
+);
 app.use(compression());
 app.use(morgan(env.isProd ? "combined" : "dev"));
 app.use(express.json({ limit: "1mb" }));
