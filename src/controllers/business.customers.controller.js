@@ -1,0 +1,88 @@
+const asyncHandler = require("../utils/asyncHandler");
+const ApiError = require("../utils/ApiError");
+const { ok } = require("../utils/ApiResponse");
+const Customer = require("../models/Customer");
+const Visit = require("../models/Visit");
+const { toCsv } = require("../utils/csv");
+
+function buildFilter(business, query) {
+  const filter = { business: business._id };
+  if (query.phone) filter.phone = { $regex: query.phone, $options: "i" };
+  if (query.minVisits) filter.totalVisits = { ...(filter.totalVisits || {}), $gte: Number(query.minVisits) };
+  if (query.maxVisits) filter.totalVisits = { ...(filter.totalVisits || {}), $lte: Number(query.maxVisits) };
+  if (query.hasUnredeemedRewards === "true") {
+    filter.milestonesUnlocked = { $elemMatch: { redeemed: false } };
+  }
+  if (query.lastVisitBefore) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $lte: new Date(query.lastVisitBefore) };
+  if (query.lastVisitAfter) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $gte: new Date(query.lastVisitAfter) };
+  return filter;
+}
+
+const SORT_MAP = {
+  lastVisit: { lastVisitAt: -1 },
+  visits: { totalVisits: -1 },
+  newest: { createdAt: -1 },
+};
+
+const listCustomers = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 25, sort = "newest" } = req.query;
+  const filter = buildFilter(req.business, req.query);
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.min(100, Math.max(1, Number(limit)));
+
+  const [items, total] = await Promise.all([
+    Customer.find(filter)
+      .sort(SORT_MAP[sort] || SORT_MAP.newest)
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum),
+    Customer.countDocuments(filter),
+  ]);
+
+  ok(res, items, { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) });
+});
+
+const getCustomer = asyncHandler(async (req, res) => {
+  const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
+  if (!customer) throw ApiError.notFound("Customer not found");
+  ok(res, customer);
+});
+
+const getCustomerHistory = asyncHandler(async (req, res) => {
+  const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
+  if (!customer) throw ApiError.notFound("Customer not found");
+
+  const history = await Visit.find({ business: req.business._id, customer: customer._id }).sort({ createdAt: -1 });
+  ok(res, history);
+});
+
+const exportCustomers = asyncHandler(async (req, res) => {
+  const filter = buildFilter(req.business, req.query);
+  const customers = await Customer.find(filter).sort({ createdAt: -1 }).lean();
+
+  const fields = ["phone"];
+  if (req.business.signupFields.name) fields.push("name");
+  if (req.business.signupFields.email) fields.push("email");
+  if (req.business.signupFields.birthday) fields.push("birthday");
+  fields.push("count", "cardCycle", "totalVisits", "totalPoints", "totalRedemptions", "lastVisitAt", "createdAt");
+
+  const rows = customers.map((c) => ({
+    phone: c.phone,
+    name: c.name,
+    email: c.email,
+    birthday: c.birthday,
+    count: c.count,
+    cardCycle: c.cardCycle,
+    totalVisits: c.totalVisits,
+    totalPoints: c.totalPoints,
+    totalRedemptions: c.totalRedemptions,
+    lastVisitAt: c.lastVisitAt,
+    createdAt: c.createdAt,
+  }));
+
+  const csv = toCsv(rows, fields);
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="${req.business.slug}-customers.csv"`);
+  res.send(csv);
+});
+
+module.exports = { listCustomers, getCustomer, getCustomerHistory, exportCustomers };
