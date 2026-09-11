@@ -44,15 +44,13 @@ const updateMe = asyncHandler(async (req, res) => {
   ok(res, withPin(business));
 });
 
+// No currentPin confirmation: the business's PIN is always visible to its
+// owner in the panel (see withPin() above), so re-entering the old one to
+// prove they know it adds friction without adding security — the bearer
+// token on this request already proves it's the account owner.
 const updatePin = asyncHandler(async (req, res) => {
-  const { pin, currentPin } = req.body;
+  const { pin } = req.body;
   if (!pin || !/^\d{4,6}$/.test(String(pin))) throw ApiError.badRequest("pin must be 4-6 digits");
-
-  if (req.business.pinHash) {
-    if (!currentPin) throw ApiError.badRequest("currentPin is required to change an existing PIN");
-    const valid = await req.business.comparePin(currentPin);
-    if (!valid) throw ApiError.unauthorized("Current PIN is incorrect");
-  }
 
   req.business.pinHash = await Business.hash(pin);
   req.business.pinEncrypted = encryptPin(pin);

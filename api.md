@@ -116,7 +116,7 @@ Requires `Authorization: Bearer <business token>` unless noted. Every route is i
 | POST | `/auth/change-password` | `{ currentPassword, newPassword }`. |
 | GET | `/me` | Full current settings, including a decrypted `pin` field (the business's own PIN, reversibly encrypted at rest — never returned to any other consumer). |
 | PUT | `/me` | Update program settings — any of: `name, earningMode, amountPerPoint, minBillAmount, milestones, afterFinalMilestone, tiers, headStart, signupFields, birthdayReward, checkInMode, billAmountFieldEnabled, stampLimitPerDay, lapsedAfterDays`. |
-| PUT | `/me/pin` | `{ pin, currentPin? }` — set/change the 4-6 digit business PIN (`currentPin` required once a PIN already exists). |
+| PUT | `/me/pin` | `{ pin }` — set/change the 4-6 digit business PIN. No `currentPin` confirmation: the PIN is always visible to the owner in the panel (`GET /me`'s decrypted `pin` field), and the bearer token already proves account ownership. |
 | PUT | `/me/branding` | JSON body: `{ primaryColor?, secondaryColor? }`. There is no logo/image upload in this API — branding is colors only. |
 | GET | `/me/qr` | `{ link, qrCodeDataUrl, nfcLink }`. |
 | GET | `/me/qr/download` | Streams the QR as a PNG (for printing a table poster). |
@@ -215,7 +215,7 @@ Everything below is enforced by the code today — not aspirational.
 ### Business — settings, PIN, branding
 
 - `updateMe` (`PUT /me`) writes only the fields in a fixed allowlist (`EDITABLE_FIELDS`) — anything else in the body is silently ignored, not rejected. There is no schema-shape validation on nested structures like `milestones[]` or `tiers[]` beyond whatever Mongoose enforces — e.g. a milestone list with duplicate `count` values, an empty `milestones[]`, or a non-ascending ladder is accepted and will just produce confusing `nextMilestone`/`progressPercent` output on the customer side.
-- `updatePin`: `pin` must match `/^\d{4,6}$/` — non-digits or wrong length → `400`. If a PIN already exists, `currentPin` is **required** and must verify via bcrypt compare, or → `400`/`401` respectively; this is the only way to rotate a PIN (no admin bypass on the business's own route — but an admin *can* overwrite it unconditionally via `PUT /admin/businesses/:id`).
+- `updatePin`: `pin` must match `/^\d{4,6}$/` — non-digits or wrong length → `400`. No `currentPin` confirmation is required — the bearer token already proves this is the account owner, and the current PIN is always visible to them via `GET /me`. An admin can also overwrite it unconditionally via `PUT /admin/businesses/:id`.
 - `updateBranding`: `primaryColor`/`secondaryColor` are accepted as **any string**, unvalidated — no hex-format check. Sending `{}` (neither field) is a no-op `200` that just re-saves the document.
 - `exportCustomers` streams a CSV built only from the business's *currently enabled* `signupFields` — if a business disables `email` after some customers already have one on file, those emails are simply omitted from future exports (not an error, just a silent column drop).
 - `listCustomers` query params (`minVisits`, `maxVisits`, `lastVisitBefore`, `lastVisitAfter`) are not validated as numbers/dates before being passed to `Number(...)`/`new Date(...)` — a garbage value (e.g. `minVisits=abc`) becomes `NaN`/`Invalid Date`, which Mongo will simply match nothing against (an empty-looking result set, not an error).
