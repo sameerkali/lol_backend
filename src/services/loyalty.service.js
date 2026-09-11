@@ -135,7 +135,7 @@ async function markVisit(business, customer, { billAmount, pin } = {}) {
     customer.visitsToday = 0;
   }
 
-  const withinDailyLimit = customer.visitsToday < business.stampLimitPerDay;
+  const withinDailyLimit = business.stampLimitPerDay <= 0 || customer.visitsToday < business.stampLimitPerDay;
   let stamps = 0;
   let reason = null;
 

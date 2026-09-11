@@ -13,7 +13,9 @@ async function businessDashboard(businessId, business, range) {
   const { start, end } = resolveRange(range);
   const matchDate = { createdAt: { $gte: start, $lte: end } };
 
-  const [signups, visitsInRange, redemptionsInRange, totalCustomers, repeatCustomers, lapsedCustomers, visitsByDay] =
+  const usingTiers = business.afterFinalMilestone === "next_tier" && (business.tiers || []).length > 0;
+
+  const [signups, visitsInRange, redemptionsInRange, totalCustomers, repeatCustomers, lapsedCustomers, visitsByDay, tierCounts] =
     await Promise.all([
       Customer.countDocuments({ business: businessId, ...matchDate }),
       Visit.countDocuments({ business: businessId, type: VISIT_TYPES.VISIT, ...matchDate }),
@@ -29,9 +31,20 @@ async function businessDashboard(businessId, business, range) {
         { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
         { $sort: { _id: 1 } },
       ]),
+      usingTiers
+        ? Customer.aggregate([
+            { $match: { business: business._id, "ruleSnapshot.tierName": { $ne: null } } },
+            { $group: { _id: "$ruleSnapshot.tierName", count: { $sum: 1 } } },
+          ])
+        : Promise.resolve([]),
     ]);
 
   const repeatVisitRate = totalCustomers > 0 ? Number(((repeatCustomers / totalCustomers) * 100).toFixed(1)) : 0;
+
+  const countByTierName = new Map(tierCounts.map((t) => [t._id, t.count]));
+  const tierBreakdown = usingTiers
+    ? business.tiers.map((t) => ({ tierName: t.name, count: countByTierName.get(t.name) || 0 }))
+    : [];
 
   return {
     range: { from: start, to: end },
@@ -44,6 +57,7 @@ async function businessDashboard(businessId, business, range) {
     lapsedCustomers,
     lapsedAfterDays: business.lapsedAfterDays,
     visitsByDay: visitsByDay.map((v) => ({ date: v._id, count: v.count })),
+    tierBreakdown,
   };
 }
 

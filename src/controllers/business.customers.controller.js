@@ -29,6 +29,7 @@ const SORT_MAP = {
   lastVisit: { lastVisitAt: -1 },
   visits: { totalVisits: -1 },
   newest: { createdAt: -1 },
+  tier: { "ruleSnapshot.tierIndex": -1, "ruleSnapshot.tierName": 1 },
 };
 
 const listCustomers = asyncHandler(async (req, res) => {
