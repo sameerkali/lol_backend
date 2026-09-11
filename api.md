@@ -121,7 +121,7 @@ Requires `Authorization: Bearer <business token>` unless noted. Every route is i
 | GET | `/me/qr` | `{ link, qrCodeDataUrl, nfcLink }`. |
 | GET | `/me/qr/download` | Streams the QR as a PNG (for printing a table poster). |
 | GET | `/dashboard` | Query `from, to` (ISO dates, default: last 30 days). Returns `signups, visits, redemptions, totalCustomers, repeatCustomers, repeatVisitRate, lapsedCustomers, visitsByDay[]`. |
-| GET | `/customers` | Search/list. Query: `phone, minVisits, maxVisits, hasUnredeemedRewards, lastVisitBefore, lastVisitAfter, sort (newest\|visits\|lastVisit), page, limit`. |
+| GET | `/customers` | Search/list. Query: `phone, minVisits, maxVisits, hasUnredeemedRewards, lastVisitBefore, lastVisitAfter, tier (exact ruleSnapshot.tierName match), birthdayToday ("true" = birthday is today, server-local date), sort (newest\|visits\|lastVisit), page, limit`. |
 | GET | `/customers/:id` | One customer's full record. |
 | GET | `/customers/:id/history` | That customer's visit/redemption log. |
 | GET | `/customers/export` | CSV download of the (optionally filtered) customer list — phone + any enabled signup fields + progress stats. |

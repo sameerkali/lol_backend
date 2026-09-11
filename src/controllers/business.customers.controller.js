@@ -5,6 +5,11 @@ const Customer = require("../models/Customer");
 const Visit = require("../models/Visit");
 const { toCsv } = require("../utils/csv");
 
+function todayMonthDay() {
+  const now = new Date();
+  return `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 function buildFilter(business, query) {
   const filter = { business: business._id };
   if (query.phone) filter.phone = { $regex: query.phone, $options: "i" };
@@ -15,6 +20,8 @@ function buildFilter(business, query) {
   }
   if (query.lastVisitBefore) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $lte: new Date(query.lastVisitBefore) };
   if (query.lastVisitAfter) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $gte: new Date(query.lastVisitAfter) };
+  if (query.tier) filter["ruleSnapshot.tierName"] = query.tier;
+  if (query.birthdayToday === "true") filter.birthday = todayMonthDay();
   return filter;
 }
 
