@@ -70,9 +70,15 @@ function maxMilestoneCount(ruleSnapshot) {
 }
 
 /**
- * When a customer completes their milestone ladder, either reset the card
- * or move them to the next tier — using the business's *current* rules,
+ * When a customer completes their milestone ladder, move them to the next
+ * tier if the business uses tiers — using the business's *current* rules,
  * since "new rules apply from their next card" per the BRD.
+ *
+ * A non-tiered ladder is never reset: a customer keeps every milestone
+ * they've earned forever once they finish it, the same way a maxed-out
+ * top tier stays maxed out below. Marking a customer "lapsed" after a
+ * period of inactivity (business.lapsedAfterDays) is a separate, unrelated
+ * mechanism and is not affected by this.
  */
 function advanceCardIfComplete(customer, business) {
   const max = maxMilestoneCount(customer.ruleSnapshot);
@@ -89,11 +95,7 @@ function advanceCardIfComplete(customer, business) {
     return true;
   }
 
-  // default: reset
-  customer.cardCycle += 1;
-  customer.count = 0;
-  customer.ruleSnapshot = business.buildRuleSnapshot(0);
-  return true;
+  return false; // ladder complete, not using tiers — stay maxed out, nothing resets
 }
 
 function computeStamps(business, customer, billAmount) {
