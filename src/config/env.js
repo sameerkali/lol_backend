@@ -35,6 +35,7 @@ const env = {
   ),
   jwtSecret: required("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  pinEncryptionKey: process.env.PIN_ENCRYPTION_KEY || null,
   admin: {
     name: process.env.ADMIN_NAME || "Expendifii Admin",
     email: process.env.ADMIN_EMAIL,

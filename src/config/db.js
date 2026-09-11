@@ -11,7 +11,16 @@ function connectDB() {
   if (mongoose.connection.readyState === 1) return Promise.resolve(mongoose.connection);
   if (!connectionPromise) {
     connectionPromise = mongoose
-      .connect(env.mongoUri, { dbName: env.mongoDbName })
+      .connect(env.mongoUri, {
+        dbName: env.mongoDbName,
+        // Mongoose's default is 30s, which outlives a Vercel function's
+        // execution limit — the function gets hard-killed (504
+        // FUNCTION_INVOCATION_TIMEOUT) before this ever gets the chance to
+        // reject with a real, useful error. Fail fast instead: a wrong URI or
+        // a MongoDB Atlas IP allowlist that doesn't include Vercel's egress
+        // IPs surfaces as a proper 500 + message within a few seconds.
+        serverSelectionTimeoutMS: 8000,
+      })
       .then((conn) => {
         console.log(`[db] connected to MongoDB database "${env.mongoDbName}"`);
         return conn;

@@ -32,6 +32,7 @@ const businessSchema = new mongoose.Schema(
     },
 
     pinHash: { type: String, default: null },
+    pinEncrypted: { type: String, default: null }, // reversible copy so the owner/admin can view the current PIN
 
     // Earning configuration
     earningMode: { type: String, enum: Object.values(EARNING_MODES), default: EARNING_MODES.VISITS },
@@ -121,6 +122,7 @@ businessSchema.set("toJSON", {
   transform: (_doc, ret) => {
     delete ret.owner?.passwordHash;
     delete ret.pinHash;
+    delete ret.pinEncrypted;
     delete ret.__v;
     return ret;
   },

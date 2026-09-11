@@ -3,6 +3,16 @@ const ApiError = require("../utils/ApiError");
 const { ok } = require("../utils/ApiResponse");
 const Business = require("../models/Business");
 const { generateQrDataUrl, generateQrBuffer } = require("../services/qr.service");
+const { encryptPin, decryptPin } = require("../utils/pinCipher");
+
+// The business's own view of itself additionally carries the plaintext PIN
+// (decrypted from pinEncrypted) so the owner can see it on the dashboard —
+// toJSON() strips pinHash/pinEncrypted for every other consumer.
+function withPin(business) {
+  const json = business.toJSON();
+  json.pin = decryptPin(business.pinEncrypted);
+  return json;
+}
 
 const EDITABLE_FIELDS = [
   "name",
@@ -22,7 +32,7 @@ const EDITABLE_FIELDS = [
 ];
 
 const getMe = asyncHandler(async (req, res) => {
-  ok(res, req.business);
+  ok(res, withPin(req.business));
 });
 
 const updateMe = asyncHandler(async (req, res) => {
@@ -31,7 +41,7 @@ const updateMe = asyncHandler(async (req, res) => {
     if (req.body[field] !== undefined) business[field] = req.body[field];
   }
   await business.save();
-  ok(res, business);
+  ok(res, withPin(business));
 });
 
 const updatePin = asyncHandler(async (req, res) => {
@@ -45,8 +55,9 @@ const updatePin = asyncHandler(async (req, res) => {
   }
 
   req.business.pinHash = await Business.hash(pin);
+  req.business.pinEncrypted = encryptPin(pin);
   await req.business.save();
-  ok(res, { updated: true });
+  ok(res, { updated: true, pin });
 });
 
 const updateBranding = asyncHandler(async (req, res) => {

@@ -38,7 +38,7 @@ The app is packaged as a single serverless function:
 - [`src/config/db.js`](src/config/db.js) caches the Mongoose connection promise so a warm Lambda reuses it instead of reconnecting per-request; [`src/app.js`](src/app.js) awaits it on every `/api` request before hitting a route (cheap no-op once connected).
 - `server.js` (with `app.listen`) is only used for local dev / non-serverless hosting — Vercel never runs it.
 
-**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL` (the deployed frontend's origin, e.g. `https://lol.expendifii.com` — CORS is locked to this; comma-separate multiple origins if needed, a trailing slash is stripped automatically so it's safe either way), `API_BASE_URL` (set to `https://lol-api.expendifii.com` — this backend's own public URL once the custom domain is attached in Vercel; falls back to `http://localhost:$PORT` if unset, which is only correct for local dev), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
+**Required environment variables on Vercel** (Project Settings → Environment Variables): `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PIN_ENCRYPTION_KEY` (used to reversibly encrypt the business PIN for display in the panel; falls back to `JWT_SECRET` if unset, but set a dedicated value in production), `FRONTEND_URL` (the deployed frontend's origin, e.g. `https://lol.expendifii.com` — CORS is locked to this; comma-separate multiple origins if needed, a trailing slash is stripped automatically so it's safe either way), `API_BASE_URL` (set to `https://lol-api.expendifii.com` — this backend's own public URL once the custom domain is attached in Vercel; falls back to `http://localhost:$PORT` if unset, which is only correct for local dev), `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` (only needed to run `npm run seed:admin` once, e.g. via `vercel env pull` + local run against the prod DB), `NODE_ENV=production`.
 
 ```bash
 npm i -g vercel   # if not already installed
@@ -114,7 +114,7 @@ Requires `Authorization: Bearer <business token>` unless noted. Every route is i
 |---|---|---|
 | POST | `/auth/login` | `{ email, password }` → `{ token, business }`. Public. |
 | POST | `/auth/change-password` | `{ currentPassword, newPassword }`. |
-| GET | `/me` | Full current settings. |
+| GET | `/me` | Full current settings, including a decrypted `pin` field (the business's own PIN, reversibly encrypted at rest — never returned to any other consumer). |
 | PUT | `/me` | Update program settings — any of: `name, earningMode, amountPerPoint, minBillAmount, milestones, afterFinalMilestone, tiers, headStart, signupFields, birthdayReward, checkInMode, billAmountFieldEnabled, stampLimitPerDay, lapsedAfterDays`. |
 | PUT | `/me/pin` | `{ pin, currentPin? }` — set/change the 4-6 digit business PIN (`currentPin` required once a PIN already exists). |
 | PUT | `/me/branding` | JSON body: `{ primaryColor?, secondaryColor? }`. There is no logo/image upload in this API — branding is colors only. |

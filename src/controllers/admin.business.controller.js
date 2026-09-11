@@ -8,6 +8,16 @@ const { getTemplate, listTemplates } = require("../constants/templates");
 const { baseSlug, randomSuffix } = require("../utils/slug");
 const { generateQrDataUrl } = require("../services/qr.service");
 const { platformStats } = require("../services/stats.service");
+const { encryptPin, decryptPin } = require("../utils/pinCipher");
+const { PLANS, BUSINESS_STATUS } = require("../constants/loyalty");
+
+// Admin has full override power per BRD, including seeing the current PIN —
+// surfaced only on single-business reads/writes, not the list view.
+function withPin(business) {
+  const json = business.toJSON();
+  json.pin = decryptPin(business.pinEncrypted);
+  return json;
+}
 
 async function uniqueSlug(name) {
   const base = baseSlug(name);
@@ -29,6 +39,7 @@ const createBusiness = asyncHandler(async (req, res) => {
   if (!name || !ownerEmail || !ownerPassword) {
     throw ApiError.badRequest("name, ownerEmail and ownerPassword are required");
   }
+  if (pin && !/^\d{4,6}$/.test(String(pin))) throw ApiError.badRequest("pin must be 4-6 digits");
 
   const existingOwner = await Business.findOne({ "owner.email": String(ownerEmail).toLowerCase() });
   if (existingOwner) throw ApiError.conflict("A business with this owner email already exists");
@@ -39,6 +50,7 @@ const createBusiness = asyncHandler(async (req, res) => {
   const slug = await uniqueSlug(name);
   const ownerPasswordHash = await Business.hash(ownerPassword);
   const pinHash = pin ? await Business.hash(pin) : null;
+  const pinEncrypted = pin ? encryptPin(pin) : null;
 
   const business = new Business({
     name,
@@ -46,6 +58,7 @@ const createBusiness = asyncHandler(async (req, res) => {
     template: template || "blank",
     owner: { email: String(ownerEmail).toLowerCase(), passwordHash: ownerPasswordHash },
     pinHash,
+    pinEncrypted,
     plan: plan || "trial",
     createdBy: req.admin._id,
     ...defaults,
@@ -53,7 +66,7 @@ const createBusiness = asyncHandler(async (req, res) => {
   });
 
   await business.save();
-  created(res, business);
+  created(res, withPin(business));
 });
 
 const listBusinesses = asyncHandler(async (req, res) => {
@@ -86,7 +99,7 @@ const listBusinesses = asyncHandler(async (req, res) => {
 const getBusiness = asyncHandler(async (req, res) => {
   const business = await Business.findById(req.params.id);
   if (!business) throw ApiError.notFound("Business not found");
-  ok(res, business);
+  ok(res, withPin(business));
 });
 
 // Admin override: can update any field on the business, including settings
@@ -100,15 +113,20 @@ const updateBusiness = asyncHandler(async (req, res) => {
   Object.assign(business, rest);
   if (name) business.name = name;
   if (ownerPassword) business.owner.passwordHash = await Business.hash(ownerPassword);
-  if (pin) business.pinHash = await Business.hash(pin);
+  if (pin) {
+    if (!/^\d{4,6}$/.test(String(pin))) throw ApiError.badRequest("pin must be 4-6 digits");
+    business.pinHash = await Business.hash(pin);
+    business.pinEncrypted = encryptPin(pin);
+  }
 
   await business.save();
-  ok(res, business);
+  ok(res, withPin(business));
 });
 
 const patchPlan = asyncHandler(async (req, res) => {
   const { plan } = req.body;
   if (!plan) throw ApiError.badRequest("plan is required");
+  if (!Object.values(PLANS).includes(plan)) throw ApiError.badRequest(`plan must be one of: ${Object.values(PLANS).join(", ")}`);
   const business = await Business.findByIdAndUpdate(req.params.id, { plan }, { new: true });
   if (!business) throw ApiError.notFound("Business not found");
   ok(res, business);
@@ -117,6 +135,7 @@ const patchPlan = asyncHandler(async (req, res) => {
 const patchStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
   if (!status) throw ApiError.badRequest("status is required");
+  if (!Object.values(BUSINESS_STATUS).includes(status)) throw ApiError.badRequest(`status must be one of: ${Object.values(BUSINESS_STATUS).join(", ")}`);
   const business = await Business.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!business) throw ApiError.notFound("Business not found");
   ok(res, business);
