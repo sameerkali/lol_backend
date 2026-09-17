@@ -11,7 +11,7 @@ function dateKey(date = new Date()) {
  * Create a new customer "card" for a business, applying head-start stamps
  * and snapshotting the business's current rules for this card cycle.
  */
-async function createCustomer(business, { phone, name, email, birthday }) {
+async function createCustomer(business, { phone, name, email, dob }) {
   const existing = await Customer.findOne({ business: business._id, phone });
   if (existing) throw ApiError.conflict("A customer with this phone number already exists for this business");
 
@@ -22,7 +22,7 @@ async function createCustomer(business, { phone, name, email, birthday }) {
     phone,
     name: business.signupFields.name ? name || "" : "",
     email: business.signupFields.email ? email || "" : "",
-    birthday: business.signupFields.birthday ? birthday || null : null,
+    dob: business.signupFields.dob ? dob || null : null,
     ruleSnapshot,
     count: 0,
     cardCycle: 0,
@@ -240,7 +240,7 @@ function buildCardView(customer) {
     phone: customer.phone,
     name: customer.name,
     email: customer.email,
-    birthday: customer.birthday,
+    dob: customer.dob,
     count: customer.count,
     cardCycle: customer.cardCycle,
     tierName: ruleSnapshot.tierName,

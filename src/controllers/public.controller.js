@@ -55,10 +55,10 @@ const lookupCustomer = asyncHandler(async (req, res) => {
 
 const signup = asyncHandler(async (req, res) => {
   const business = await loadActiveBusiness(req.params.slug);
-  const { phone, name, email, birthday } = req.body;
+  const { phone, name, email, dob } = req.body;
   if (!phone) throw ApiError.badRequest("phone is required");
 
-  const customer = await loyaltyService.createCustomer(business, { phone, name, email, birthday });
+  const customer = await loyaltyService.createCustomer(business, { phone, name, email, dob });
   created(res, { card: loyaltyService.buildCardView(customer) });
 });
 

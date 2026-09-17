@@ -52,7 +52,7 @@ const businessSchema = new mongoose.Schema(
     signupFields: {
       name: { type: Boolean, default: false },
       email: { type: Boolean, default: false },
-      birthday: { type: Boolean, default: false },
+      dob: { type: Boolean, default: false },
     },
     birthdayReward: {
       enabled: { type: Boolean, default: false },

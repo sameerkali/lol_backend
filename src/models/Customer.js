@@ -48,7 +48,7 @@ const customerSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     name: { type: String, default: "" },
     email: { type: String, default: "" },
-    birthday: { type: String, default: null }, // stored as MM-DD
+    dob: { type: String, default: null }, // "YYYY-MM-DD"; legacy customers may still hold a plain "MM-DD"
 
     ruleSnapshot: { type: ruleSnapshotSchema, required: true },
 

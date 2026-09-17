@@ -14,7 +14,7 @@ const TEMPLATES = {
       billAmountFieldEnabled: false,
       stampLimitPerDay: 1,
       headStart: { enabled: false, stamps: 0 },
-      signupFields: { name: true, email: false, birthday: false },
+      signupFields: { name: true, email: false, dob: false },
       birthdayReward: { enabled: false, rewardType: REWARD_TYPES.CUSTOM, rewardValue: "", label: "" },
       afterFinalMilestone: AFTER_FINAL_MILESTONE.RESET,
       milestones: [
@@ -36,7 +36,7 @@ const TEMPLATES = {
       billAmountFieldEnabled: true,
       stampLimitPerDay: 1,
       headStart: { enabled: true, stamps: 1 },
-      signupFields: { name: true, email: true, birthday: true },
+      signupFields: { name: true, email: true, dob: true },
       birthdayReward: { enabled: true, rewardType: REWARD_TYPES.PERCENT_OFF, rewardValue: "15", label: "Birthday treat" },
       afterFinalMilestone: AFTER_FINAL_MILESTONE.NEXT_TIER,
       milestones: [
@@ -73,7 +73,7 @@ const TEMPLATES = {
       billAmountFieldEnabled: false,
       stampLimitPerDay: 1,
       headStart: { enabled: false, stamps: 0 },
-      signupFields: { name: false, email: false, birthday: false },
+      signupFields: { name: false, email: false, dob: false },
       birthdayReward: { enabled: false, rewardType: REWARD_TYPES.CUSTOM, rewardValue: "", label: "" },
       afterFinalMilestone: AFTER_FINAL_MILESTONE.RESET,
       milestones: [{ count: 10, rewardType: REWARD_TYPES.CUSTOM, rewardValue: "Free reward", label: "10 visits" }],

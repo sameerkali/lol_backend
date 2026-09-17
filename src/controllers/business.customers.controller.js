@@ -21,7 +21,10 @@ function buildFilter(business, query) {
   if (query.lastVisitBefore) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $lte: new Date(query.lastVisitBefore) };
   if (query.lastVisitAfter) filter.lastVisitAt = { ...(filter.lastVisitAt || {}), $gte: new Date(query.lastVisitAfter) };
   if (query.tier) filter["ruleSnapshot.tierName"] = query.tier;
-  if (query.birthdayToday === "true") filter.birthday = todayMonthDay();
+  // dob is "YYYY-MM-DD" for new signups, but legacy customers only have a
+  // plain "MM-DD" — both end with "MM-DD", so anchoring the regex to the end
+  // matches today's month+day regardless of which shape is stored.
+  if (query.dobToday === "true") filter.dob = { $regex: `${todayMonthDay()}$` };
   return filter;
 }
 
@@ -70,14 +73,14 @@ const exportCustomers = asyncHandler(async (req, res) => {
   const fields = ["phone"];
   if (req.business.signupFields.name) fields.push("name");
   if (req.business.signupFields.email) fields.push("email");
-  if (req.business.signupFields.birthday) fields.push("birthday");
+  if (req.business.signupFields.dob) fields.push("dob");
   fields.push("count", "cardCycle", "totalVisits", "totalPoints", "totalRedemptions", "lastVisitAt", "createdAt");
 
   const rows = customers.map((c) => ({
     phone: c.phone,
     name: c.name,
     email: c.email,
-    birthday: c.birthday,
+    dob: c.dob,
     count: c.count,
     cardCycle: c.cardCycle,
     totalVisits: c.totalVisits,
