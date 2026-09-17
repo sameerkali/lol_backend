@@ -52,10 +52,43 @@ const listCustomers = asyncHandler(async (req, res) => {
   ok(res, items, { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) });
 });
 
+// Richer single-customer view: profile + current tier + every unlocked
+// reward + full visit/redemption history, so the frontend detail page and
+// its WhatsApp-share action don't need three separate round trips.
 const getCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
   if (!customer) throw ApiError.notFound("Customer not found");
-  ok(res, customer);
+
+  const history = await Visit.find({ business: req.business._id, customer: customer._id }).sort({ createdAt: -1 });
+
+  ok(res, {
+    customer: {
+      _id: customer._id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      dob: customer.dob,
+      totalVisits: customer.totalVisits,
+      totalPoints: customer.totalPoints,
+      lastVisitAt: customer.lastVisitAt,
+      createdAt: customer.createdAt,
+      ruleSnapshot: { tierName: customer.ruleSnapshot.tierName },
+      rewards: customer.milestonesUnlocked.map((r) => ({
+        _id: r._id,
+        label: r.label,
+        rewardType: r.rewardType,
+        rewardValue: r.rewardValue,
+        redeemedAt: r.redeemedAt,
+      })),
+      history: history.map((v) => ({
+        _id: v._id,
+        type: v.type,
+        createdAt: v.createdAt,
+        rewardType: v.rewardType,
+        rewardValue: v.rewardValue,
+      })),
+    },
+  });
 });
 
 const getCustomerHistory = asyncHandler(async (req, res) => {
