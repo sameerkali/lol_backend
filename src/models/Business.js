@@ -65,7 +65,7 @@ const businessSchema = new mongoose.Schema(
     checkInMode: { type: String, enum: Object.values(CHECK_IN_MODES), default: CHECK_IN_MODES.AUTOMATIC },
     billAmountFieldEnabled: { type: Boolean, default: false },
     stampLimitPerDay: { type: Number, default: 1, min: 0 },
-    lapsedAfterDays: { type: Number, default: 30, min: 1 },
+    lapsedAfterDays: { type: Number, default: 365, min: 1 },
 
     // Branding
     branding: {
