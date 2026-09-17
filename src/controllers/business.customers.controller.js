@@ -35,9 +35,12 @@ const SORT_MAP = {
   tier: { "ruleSnapshot.tierIndex": -1, "ruleSnapshot.tierName": 1 },
 };
 
-const listCustomers = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 25, sort = "newest" } = req.query;
-  const filter = buildFilter(req.business, req.query);
+// Reusable core: shared by the business self-service routes and the
+// admin-scoped equivalents under /admin/businesses/:id/*, since both just
+// need a resolved `business` document to scope the query.
+async function listCustomersForBusiness(business, query) {
+  const { page = 1, limit = 25, sort = "newest" } = query;
+  const filter = buildFilter(business, query);
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.min(100, Math.max(1, Number(limit)));
 
@@ -49,19 +52,16 @@ const listCustomers = asyncHandler(async (req, res) => {
     Customer.countDocuments(filter),
   ]);
 
-  ok(res, items, { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) });
-});
+  return { items, meta: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) } };
+}
 
-// Richer single-customer view: profile + current tier + every unlocked
-// reward + full visit/redemption history, so the frontend detail page and
-// its WhatsApp-share action don't need three separate round trips.
-const getCustomer = asyncHandler(async (req, res) => {
-  const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
+async function getCustomerDetailForBusiness(business, customerId) {
+  const customer = await Customer.findOne({ _id: customerId, business: business._id });
   if (!customer) throw ApiError.notFound("Customer not found");
 
-  const history = await Visit.find({ business: req.business._id, customer: customer._id }).sort({ createdAt: -1 });
+  const history = await Visit.find({ business: business._id, customer: customer._id }).sort({ createdAt: -1 });
 
-  ok(res, {
+  return {
     customer: {
       _id: customer._id,
       name: customer.name,
@@ -88,25 +88,17 @@ const getCustomer = asyncHandler(async (req, res) => {
         rewardValue: v.rewardValue,
       })),
     },
-  });
-});
+  };
+}
 
-const getCustomerHistory = asyncHandler(async (req, res) => {
-  const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
-  if (!customer) throw ApiError.notFound("Customer not found");
-
-  const history = await Visit.find({ business: req.business._id, customer: customer._id }).sort({ createdAt: -1 });
-  ok(res, history);
-});
-
-const exportCustomers = asyncHandler(async (req, res) => {
-  const filter = buildFilter(req.business, req.query);
+async function buildCustomersCsv(business, query) {
+  const filter = buildFilter(business, query);
   const customers = await Customer.find(filter).sort({ createdAt: -1 }).lean();
 
   const fields = ["phone"];
-  if (req.business.signupFields.name) fields.push("name");
-  if (req.business.signupFields.email) fields.push("email");
-  if (req.business.signupFields.dob) fields.push("dob");
+  if (business.signupFields.name) fields.push("name");
+  if (business.signupFields.email) fields.push("email");
+  if (business.signupFields.dob) fields.push("dob");
   fields.push("count", "cardCycle", "totalVisits", "totalPoints", "totalRedemptions", "lastVisitAt", "createdAt");
 
   const rows = customers.map((c) => ({
@@ -123,10 +115,41 @@ const exportCustomers = asyncHandler(async (req, res) => {
     createdAt: c.createdAt,
   }));
 
-  const csv = toCsv(rows, fields);
+  return toCsv(rows, fields);
+}
+
+const listCustomers = asyncHandler(async (req, res) => {
+  const { items, meta } = await listCustomersForBusiness(req.business, req.query);
+  ok(res, items, meta);
+});
+
+const getCustomer = asyncHandler(async (req, res) => {
+  const data = await getCustomerDetailForBusiness(req.business, req.params.id);
+  ok(res, data);
+});
+
+const getCustomerHistory = asyncHandler(async (req, res) => {
+  const customer = await Customer.findOne({ _id: req.params.id, business: req.business._id });
+  if (!customer) throw ApiError.notFound("Customer not found");
+
+  const history = await Visit.find({ business: req.business._id, customer: customer._id }).sort({ createdAt: -1 });
+  ok(res, history);
+});
+
+const exportCustomers = asyncHandler(async (req, res) => {
+  const csv = await buildCustomersCsv(req.business, req.query);
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename="${req.business.slug}-customers.csv"`);
   res.send(csv);
 });
 
-module.exports = { listCustomers, getCustomer, getCustomerHistory, exportCustomers };
+module.exports = {
+  listCustomers,
+  getCustomer,
+  getCustomerHistory,
+  exportCustomers,
+  // shared with admin.business.controller.js for the admin-scoped routes
+  listCustomersForBusiness,
+  getCustomerDetailForBusiness,
+  buildCustomersCsv,
+};

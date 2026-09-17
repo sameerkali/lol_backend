@@ -7,9 +7,16 @@ const Visit = require("../models/Visit");
 const { getTemplate, listTemplates } = require("../constants/templates");
 const { baseSlug, randomSuffix } = require("../utils/slug");
 const { generateQrDataUrl } = require("../services/qr.service");
-const { platformStats } = require("../services/stats.service");
+const { platformStats, businessDashboard } = require("../services/stats.service");
 const { encryptPin, decryptPin } = require("../utils/pinCipher");
 const { PLANS, BUSINESS_STATUS } = require("../constants/loyalty");
+const customersController = require("./business.customers.controller");
+
+async function loadBusinessOr404(id) {
+  const business = await Business.findById(id);
+  if (!business) throw ApiError.notFound("Business not found");
+  return business;
+}
 
 // Admin has full override power per BRD, including seeing the current PIN —
 // surfaced only on single-business reads/writes, not the list view.
@@ -163,6 +170,36 @@ const stats = asyncHandler(async (req, res) => {
   ok(res, data);
 });
 
+// Admin-scoped mirrors of the business self-service dashboard/customers
+// endpoints, per BRD "View and override any business's settings" — the
+// admin token isn't tied to one business, so :id resolves which one.
+const getBusinessDashboard = asyncHandler(async (req, res) => {
+  const business = await loadBusinessOr404(req.params.id);
+  const { from, to } = req.query;
+  const data = await businessDashboard(business._id, business, { from, to });
+  ok(res, data);
+});
+
+const listBusinessCustomers = asyncHandler(async (req, res) => {
+  const business = await loadBusinessOr404(req.params.id);
+  const { items, meta } = await customersController.listCustomersForBusiness(business, req.query);
+  ok(res, items, meta);
+});
+
+const exportBusinessCustomers = asyncHandler(async (req, res) => {
+  const business = await loadBusinessOr404(req.params.id);
+  const csv = await customersController.buildCustomersCsv(business, req.query);
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="${business.slug}-customers.csv"`);
+  res.send(csv);
+});
+
+const getBusinessCustomer = asyncHandler(async (req, res) => {
+  const business = await loadBusinessOr404(req.params.id);
+  const data = await customersController.getCustomerDetailForBusiness(business, req.params.customerId);
+  ok(res, data);
+});
+
 module.exports = {
   templates,
   createBusiness,
@@ -174,4 +211,8 @@ module.exports = {
   deleteBusiness,
   getBusinessQr,
   stats,
+  getBusinessDashboard,
+  listBusinessCustomers,
+  exportBusinessCustomers,
+  getBusinessCustomer,
 };

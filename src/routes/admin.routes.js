@@ -47,4 +47,10 @@ router.patch("/businesses/:id/status", requireAdmin, businessController.patchSta
 router.delete("/businesses/:id", requireAdmin, businessController.deleteBusiness);
 router.get("/businesses/:id/qr", requireAdmin, businessController.getBusinessQr);
 
+// Admin-scoped mirrors of the business self-service dashboard/customers views
+router.get("/businesses/:id/dashboard", requireAdmin, businessController.getBusinessDashboard);
+router.get("/businesses/:id/customers", requireAdmin, businessController.listBusinessCustomers);
+router.get("/businesses/:id/customers/export", requireAdmin, businessController.exportBusinessCustomers);
+router.get("/businesses/:id/customers/:customerId", requireAdmin, businessController.getBusinessCustomer);
+
 module.exports = router;
